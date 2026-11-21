@@ -1,6 +1,6 @@
 // Service worker: zorgt dat de app ook zonder internet opent.
 // Strategie: eerst het netwerk (altijd de nieuwste versie), anders de opgeslagen kopie.
-const CACHE = 'sport-huishouden-v2';
+const CACHE = 'sport-huishouden-v3';
 const FILES = [
   './', './index.html', './styles.css', './config.js', './sync.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',

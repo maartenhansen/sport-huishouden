@@ -134,7 +134,15 @@ section { margin: 18px 0 24px; }
   font: inherit; font-size: .72rem; padding: 8px 0 10px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
+.tabbar button { position: relative; }
 .tabbar button span { font-size: 1.3rem; filter: grayscale(1); opacity: .7; }
+.tab-badge {
+  position: absolute; top: 3px; left: calc(50% + 6px);
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--bad); color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px;
+  text-align: center; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--card);
+}
 .tabbar button.active { color: var(--accent); font-weight: 700; }
 .tabbar button.active span { filter: none; opacity: 1; }
 

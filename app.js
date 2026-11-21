@@ -504,8 +504,30 @@ function renderSyncBadge() {
   el.className = 'sync-badge ' + cls;
 }
 
+// Bolletjes met het aantal openstaande zaken (vandaag + te laat):
+// op de tabbladen in de app, en op het app-icoon als het toestel dat ondersteunt.
+function updateBadges(loggedOut) {
+  const t = today();
+  const yesterday = addInterval(t, -1, 'dagen');
+  const openSport = loggedOut ? 0 : db.activities.filter(a => a.status === 'gepland' && (a.date === t || a.date === yesterday)).length;
+  const openTasks = loggedOut ? 0 : db.tasks.filter(x => x.nextDate <= t).length;
+
+  for (const [id, n] of [['badgeSport', openSport], ['badgeTasks', openTasks]]) {
+    const el = document.getElementById(id);
+    el.hidden = n === 0;
+    el.textContent = n > 9 ? '9+' : String(n);
+  }
+
+  const total = openSport + openTasks;
+  try {
+    if (total > 0 && navigator.setAppBadge) navigator.setAppBadge(total).catch(() => {});
+    else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+  } catch (e) { /* niet ondersteund op dit toestel */ }
+}
+
 function render() {
   const loggedOut = Cloud.needsLogin();
+  updateBadges(loggedOut);
   document.body.classList.toggle('logged-out', loggedOut);
   renderSyncBadge();
   if (loggedOut) {
@@ -515,6 +537,7 @@ function render() {
     return;
   }
   rollOverTasks();
+  updateBadges(false);
   document.getElementById('title').textContent = VIEWS[view].title;
   document.getElementById('subtitle').textContent = view === 'vandaag'
     ? new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' })
