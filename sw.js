@@ -3,8 +3,9 @@
 importScripts('version.js');
 const CACHE = 'sport-huishouden-' + self.APP_VERSION;
 const FILES = [
-  './', './index.html', './styles.css', './version.js', './config.js', './sync.js', './app.js', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png',
+  './', './index.html', './styles.css', './version.js', './config.js', './sync.js', './app.js',
+  './manifest.webmanifest', './manifest-dev.webmanifest',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/dev-192.png', './icons/dev-512.png',
 ];
 
 self.addEventListener('install', e => {
@@ -47,7 +48,9 @@ self.addEventListener('notificationclick', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    // cache: 'no-cache' = altijd bij de server navragen of het bestand gewijzigd is,
+    // zodat na een update nooit oude en nieuwe bestanden door elkaar gebruikt worden
+    fetch(e.request, { cache: 'no-cache' })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));

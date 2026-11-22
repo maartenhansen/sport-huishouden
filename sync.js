@@ -17,8 +17,9 @@ const Cloud = (() => {
   const enabled = Boolean(cfg.supabaseUrl && cfg.supabaseKey);
   const base = (cfg.supabaseUrl || '').replace(/\/+$/, '');
 
-  const SESSION_KEY = 'sport-huishouden-session';
-  const SHADOW_KEY = 'sport-huishouden-shadow';
+  const suffix = window.APP_ENV === 'dev' ? '-dev' : '';
+  const SESSION_KEY = 'sport-huishouden-session' + suffix;
+  const SHADOW_KEY = 'sport-huishouden-shadow' + suffix;
   const PAGE = 1000; // Supabase geeft standaard max. 1000 rijen per verzoek
 
   // Omzetting tussen app-objecten (camelCase) en databaserijen (snake_case)

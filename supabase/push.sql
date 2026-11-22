@@ -1,10 +1,13 @@
 -- =====================================================================
 -- Pushmeldingen: dagoverzicht om 17:30 en 19:00 (Europe/Brussels)
 --
--- Uitvoeren in Supabase → SQL Editor, in deze volgorde:
---   STAP 1: dit volledige bestand → Run
---   STAP 2: de regel  select vault.create_secret('...', 'cron_secret');
---           uit je bestand push-sleutels.txt (die bevat de echte geheime waarde)
+-- Werkt in elke omgeving (live en dev): de projectgegevens komen uit de Vault.
+--
+-- Uitvoeren in Supabase → SQL Editor:
+--   STAP 1 (eenmalig per project): de drie regels  select vault.create_secret(...)
+--          uit je bestand push-sleutels.txt voor die omgeving
+--          (cron_secret, project_url en publishable_key).
+--   STAP 2: dit volledige bestand → Run. Mag je gerust opnieuw uitvoeren.
 -- =====================================================================
 
 -- ---------- Toestellen die meldingen willen ontvangen ----------
@@ -42,11 +45,11 @@ select cron.schedule(
   '0,30 * * * *',
   $$
   select net.http_post(
-    url     := 'https://cyvuznstxbqjlflyjrgd.supabase.co/functions/v1/daily-summary',
+    url     := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
+               || '/functions/v1/daily-summary',
     headers := jsonb_build_object(
       'Content-Type',  'application/json',
-      -- publieke sleutel: Supabase vraagt die bij elke functie-aanroep (ze is niet geheim)
-      'apikey',        'sb_publishable_qmNHZv0aO3cqa-4TL7aEcg_0Ysy9z0I',
+      'apikey',        (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key'),
       'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     ),
     body    := '{}'::jsonb

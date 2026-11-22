@@ -5,7 +5,9 @@
    Gegevens worden lokaal op het toestel bewaard (localStorage).
    ============================================================ */
 
-const STORAGE_KEY = 'sport-huishouden-v1';
+// Dev bewaart alles onder aparte namen, zodat live- en testgegevens nooit door elkaar lopen
+const STORAGE_KEY = 'sport-huishouden-v1' + (window.APP_ENV === 'dev' ? '-dev' : '');
+if (window.APP_ENV === 'dev') document.body.classList.add('env-dev');
 
 const CATS = [
   { name: 'Padel',          icon: '🏓', color: '#0ea5e9' },

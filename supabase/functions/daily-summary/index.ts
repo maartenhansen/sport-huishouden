@@ -12,6 +12,7 @@
 //
 // Benodigde secrets (Edge Functions → Secrets):
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET
+//   APP_URL (optioneel; standaard de live-site, voor dev: https://dev-dailyplanner.hansen-tools.be/)
 // (SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY zijn automatisch beschikbaar)
 // =====================================================================
 
@@ -20,7 +21,7 @@ import webpush from "npm:web-push@3.6.7";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
-const APP_URL = "https://dailyplanner.hansen-tools.be/";
+const APP_URL = Deno.env.get("APP_URL") || "https://dailyplanner.hansen-tools.be/";
 const TIMEZONE = "Europe/Brussels";
 const SEND_TIMES = ["17:30", "19:00"];
 const WINDOW_MINUTES = 10; // marge omdat het tijdschema enkele seconden later kan starten
