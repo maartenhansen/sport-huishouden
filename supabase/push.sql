@@ -45,6 +45,8 @@ select cron.schedule(
     url     := 'https://cyvuznstxbqjlflyjrgd.supabase.co/functions/v1/daily-summary',
     headers := jsonb_build_object(
       'Content-Type',  'application/json',
+      -- publieke sleutel: Supabase vraagt die bij elke functie-aanroep (ze is niet geheim)
+      'apikey',        'sb_publishable_qmNHZv0aO3cqa-4TL7aEcg_0Ysy9z0I',
       'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     ),
     body    := '{}'::jsonb
