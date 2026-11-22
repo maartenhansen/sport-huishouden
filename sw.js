@@ -1,8 +1,9 @@
 // Service worker: zorgt dat de app ook zonder internet opent.
 // Strategie: eerst het netwerk (altijd de nieuwste versie), anders de opgeslagen kopie.
-const CACHE = 'sport-huishouden-v4';
+importScripts('version.js');
+const CACHE = 'sport-huishouden-' + self.APP_VERSION;
 const FILES = [
-  './', './index.html', './styles.css', './config.js', './sync.js', './app.js', './manifest.webmanifest',
+  './', './index.html', './styles.css', './version.js', './config.js', './sync.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',
 ];
 

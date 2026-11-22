@@ -466,6 +466,7 @@ function viewHistory() {
         <button class="btn" data-action="backup">Back-up maken</button>
         <button class="btn" data-action="restore">Back-up terugzetten</button>
       </div>
+      <p class="hint small" style="text-align:center;margin-top:16px">Versie ${esc(window.APP_VERSION || '?')}</p>
     </section>`;
 }
 
