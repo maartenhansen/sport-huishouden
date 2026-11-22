@@ -440,6 +440,7 @@ function viewHistory() {
         </div>`).join('')}
     </section>
     ${viewStats()}
+    ${Cloud.enabled ? pushSection() : ''}
     <section>
       <h2 class="section-title">Laatste ${historyDays} dagen</h2>
       ${days.length
@@ -504,6 +505,89 @@ function renderSyncBadge() {
   el.className = 'sync-badge ' + cls;
 }
 
+/* ---------- Pushmeldingen (dagoverzicht om 17:30 en 19:00) ---------- */
+let pushState = 'unknown'; // unknown | unsupported | denied | on | off | busy
+
+const pushSupported = () => Cloud.enabled && window.APP_CONFIG.vapidPublicKey &&
+  'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+function base64UrlToBytes(s) {
+  const b64 = (s + '='.repeat((4 - (s.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+async function currentPushSubscription() {
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+async function refreshPushState() {
+  if (!pushSupported()) { pushState = 'unsupported'; return; }
+  if (Notification.permission === 'denied') { pushState = 'denied'; return; }
+  try {
+    const sub = await currentPushSubscription();
+    pushState = sub ? 'on' : 'off';
+    // Registratie opnieuw bevestigen bij de server (bv. na opnieuw inloggen)
+    if (sub && !Cloud.needsLogin()) Cloud.savePushSubscription(sub.toJSON()).catch(() => {});
+  } catch { pushState = 'off'; }
+}
+
+async function enablePush() {
+  pushState = 'busy'; render();
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      pushState = permission === 'denied' ? 'denied' : 'off';
+      render();
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64UrlToBytes(window.APP_CONFIG.vapidPublicKey),
+    });
+    await Cloud.savePushSubscription(sub.toJSON());
+    pushState = 'on';
+    toast('Meldingen staan aan');
+  } catch (e) {
+    await refreshPushState();
+    toast('Aanzetten mislukt: ' + e.message);
+  }
+  render();
+}
+
+async function disablePush() {
+  try {
+    const sub = await currentPushSubscription();
+    if (sub) {
+      await Cloud.deletePushSubscription(sub.endpoint).catch(() => {});
+      await sub.unsubscribe();
+    }
+    toast('Meldingen staan uit');
+  } catch (e) {
+    toast('Uitzetten mislukt: ' + e.message);
+  }
+  await refreshPushState();
+  render();
+}
+
+function pushSection() {
+  const texts = {
+    unknown:     '<p class="hint">Even kijken…</p>',
+    busy:        '<p class="hint">Bezig…</p>',
+    unsupported: '<p class="hint">Meldingen worden hier niet ondersteund. Gebruik de geïnstalleerde app op je gsm.</p>',
+    denied:      '<p class="hint late">Meldingen zijn geblokkeerd. Zet ze aan via de instellingen van je gsm: Instellingen → Apps → Sport &amp; Huishouden → Meldingen.</p>',
+    off:         `<p class="hint">Krijg om 17:30 en 19:00 een melding met wat er vandaag nog openstaat.</p>
+                  <button class="btn primary" data-action="push-on" style="width:100%">Meldingen aanzetten</button>`,
+    on:          `<p class="hint">✓ Je krijgt om 17:30 en 19:00 een melding als er nog iets openstaat.</p>
+                  <div class="btn-row">
+                    <button class="btn" data-action="push-test">Testmelding</button>
+                    <button class="btn" data-action="push-off">Uitzetten</button>
+                  </div>`,
+  };
+  return `<section><h2 class="section-title">Meldingen</h2>${texts[pushState]}</section>`;
+}
+
 // Bolletjes met het aantal openstaande zaken (vandaag + te laat):
 // op de tabbladen in de app, en op het app-icoon als het toestel dat ondersteunt.
 function updateBadges(loggedOut) {
@@ -519,6 +603,13 @@ function updateBadges(loggedOut) {
   }
 
   const total = openSport + openTasks;
+  // Alles afgewerkt: de dagoverzicht-melding (en daarmee het bolletje op het icoon) weghalen
+  if (total === 0 && navigator.serviceWorker) {
+    navigator.serviceWorker.getRegistration()
+      .then(reg => reg && reg.getNotifications({ tag: 'dagoverzicht' }))
+      .then(list => (list || []).forEach(n => n.close()))
+      .catch(() => {});
+  }
   try {
     if (total > 0 && navigator.setAppBadge) navigator.setAppBadge(total).catch(() => {});
     else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
@@ -763,7 +854,21 @@ const ACTIONS = {
     const msg = pending
       ? `Er zijn nog ${pending} wijzigingen niet opgeslagen in de cloud. Die gaan verloren als je nu uitlogt. Toch uitloggen?`
       : 'Uitloggen? De gegevens worden van dit toestel verwijderd (ze blijven in de cloud bewaard).';
-    if (confirm(msg)) Cloud.signOut();
+    if (!confirm(msg)) return;
+    // Eerst meldingen voor dit toestel afmelden, anders blijven ze komen na het uitloggen
+    (pushState === 'on' ? disablePush() : Promise.resolve()).finally(() => Cloud.signOut());
+  },
+  'push-on':           () => enablePush(),
+  'push-off':          () => disablePush(),
+  'push-test':         async () => {
+    toast('Testmelding wordt verstuurd…');
+    try {
+      const r = await Cloud.sendTestPush();
+      const res = (r.resultaten || []).join(', ');
+      toast(res.includes('verstuurd') ? 'Testmelding verstuurd' : 'Resultaat: ' + (res || 'onbekend'));
+    } catch (e) {
+      toast('Testmelding mislukt: ' + e.message);
+    }
   },
 };
 
@@ -825,6 +930,7 @@ document.addEventListener('submit', async e => {
     view = 'vandaag';
     render();
     Cloud.sync();
+    refreshPushState();
   } catch (err) {
     error.textContent = err.message;
     button.disabled = false;
@@ -853,6 +959,7 @@ Cloud.init({
 });
 render();
 Cloud.sync();
+refreshPushState().then(() => { if (view === 'geschiedenis') render(); });
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));

@@ -9,4 +9,6 @@
 window.APP_CONFIG = {
   supabaseUrl: 'https://cyvuznstxbqjlflyjrgd.supabase.co',
   supabaseKey: 'sb_publishable_qmNHZv0aO3cqa-4TL7aEcg_0Ysy9z0I',
+  // Publieke sleutel voor pushmeldingen (de bijhorende geheime sleutel staat alleen in Supabase)
+  vapidPublicKey: 'BNl5OFAItkTo75I-uFaeznLq0Ec-UBzHBZCblP7RfVjz5ptVDl-VUmg-C7-9o123Jw2lTD19uwah5cQp7mqhTQc',
 };

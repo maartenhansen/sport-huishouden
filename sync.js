@@ -265,8 +265,34 @@ const Cloud = (() => {
     }
   }
 
+  /* ---------- Pushmeldingen ---------- */
+  async function savePushSubscription(sub) {
+    await rest('POST', 'push_subscriptions?on_conflict=endpoint',
+      [{ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth }],
+      { Prefer: 'resolution=merge-duplicates,return=minimal' });
+  }
+
+  async function deletePushSubscription(endpoint) {
+    await rest('DELETE', `push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`);
+  }
+
+  // Vraagt de serverfunctie om meteen een testmelding naar dit account te sturen
+  async function sendTestPush() {
+    const res = await fetch(`${base}/functions/v1/daily-summary`, {
+      method: 'POST',
+      headers: { apikey: cfg.supabaseKey, Authorization: `Bearer ${await accessToken()}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Serverfout ${res.status}`);
+    return data;
+  }
+
   return {
     enabled,
+    savePushSubscription,
+    deletePushSubscription,
+    sendTestPush,
     init(hooks) { app = { ...app, ...hooks }; },
     needsLogin: () => enabled && !session,
     email: () => (session && session.email) || '',
